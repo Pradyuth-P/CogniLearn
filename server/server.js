@@ -16,32 +16,32 @@ app.use(express.json());
 app.use('/api/sessions', sessionsRouter);
 
 // Health check
-app.get('/', (req, res) => res.json({ status: 'CogniLearn API running', db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' }));
+app.get('/', (req, res) => res.json({
+    status: 'CogniLearn API running',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    version: '3.5',
+}));
 
-// Connect to MongoDB then start server
+// ── Always start the Express server first ──
+app.listen(PORT, () => {
+    console.log(`\n🚀 CogniLearn API server started`);
+    console.log(`   http://localhost:${PORT}`);
+    console.log(`   Sessions endpoint: http://localhost:${PORT}/api/sessions\n`);
+});
+
+// ── Then attempt MongoDB connection (non-blocking) ──
 console.log(`🔗 Connecting to MongoDB...`);
-console.log(`   URI: ${MONGO_URI.replace(/:([^:@]{1,}?)@/, ':****@')}`);
+console.log(`   URI: ${MONGO_URI.replace(/:([^:@]{1,}?)@/, ':****@')}\n`);
 
 mongoose
     .connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 })
     .then(() => {
-        console.log(`✅ MongoDB connected successfully!`);
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on http://localhost:${PORT}`);
-            console.log(`📊 Faculty dashboard API: http://localhost:${PORT}/api/sessions`);
-        });
+        console.log(`✅ MongoDB connected — sessions will persist to database.`);
     })
     .catch((err) => {
-        console.error('\n❌ MongoDB Connection Failed!');
-        console.error(`   Reason: ${err.message}\n`);
-        console.error('─────────────────────────────────────────────────────────');
-        console.error('  HOW TO FIX — Use MongoDB Atlas (Free Cloud DB):');
-        console.error('  1. Go to https://www.mongodb.com/atlas and sign up free');
-        console.error('  2. Create a free M0 cluster');
-        console.error('  3. Click Connect → Drivers → copy the connection string');
-        console.error('  4. Open server/.env and paste it as:');
-        console.error('     MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/cognilearn');
-        console.error('  5. Restart the server');
-        console.error('─────────────────────────────────────────────────────────\n');
-        process.exit(1);
+        console.warn(`\n⚠️  MongoDB connection failed: ${err.message}`);
+        console.warn(`   Running in OFFLINE mode — sessions won't persist.`);
+        console.warn(`   To enable persistence, update MONGO_URI in server/.env\n`);
+        console.warn(`   Get a free DB: https://www.mongodb.com/atlas\n`);
+        // Do NOT exit — keep the server running for the health-check endpoint
     });

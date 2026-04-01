@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
 import {
     BookOpen, CheckSquare, Trophy, Upload, Wand2, Volume2, StopCircle,
-    Microscope, Orbit, Save, Loader2
+    Save, Loader2, ChevronLeft, Lock, CheckCircle2, Clock, ArrowLeft
 } from 'lucide-react';
-import { useApp } from '../App.jsx';
+import { useApp, SUBJECTS } from '../App.jsx';
 import QuizSection from './QuizSection.jsx';
 
 /* ─── File Handlers ─────────────────────────────────────────────── */
@@ -76,12 +76,15 @@ export default function Module() {
         moduleTitle, moduleCode, articleHTML, setArticleHTML,
         setModuleTitle, setModuleCode, score, showAiQuiz,
         setShowAiQuiz, finishSession, notify, activeProfiles,
+        currentSubject, currentLesson, selectLesson, navigate,
+        activateProfile,
     } = useApp();
 
     const [activeTab, setActiveTab] = useState('reading');
     const [loading, setLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('Processing...');
     const [speaking, setSpeaking] = useState(false);
+    const [completedLessons, setCompletedLessons] = useState(new Set());
     const fileInputRef = useRef(null);
     const timeoutRef = useRef(null);
 
@@ -156,134 +159,255 @@ export default function Module() {
         }
     };
 
+    /* ── Switch lesson ── */
+    const handleLessonClick = (subject, lesson) => {
+        selectLesson(subject, lesson);
+        setActiveTab('reading');
+        setSpeaking(false);
+        window.speechSynthesis.cancel();
+    };
+
+    /* ── Mark complete ── */
+    const markComplete = () => {
+        if (currentLesson) {
+            setCompletedLessons(prev => new Set([...prev, currentLesson.id]));
+            notify('Lesson Complete! 🎉', '+50 XP earned', 'check');
+        }
+    };
+
     const isDyslexia = activeProfiles.has('dyslexia');
+    const subject = currentSubject || SUBJECTS[0];
+    const progress = subject ? Math.round((completedLessons.size / subject.lessons.length) * 100) : 0;
 
     return (
-        <section className="absolute inset-0 flex flex-col bg-slate-50">
-            {/* ── Module Header ── */}
-            <div className="bg-white border-b border-slate-200 px-8 pt-6 pb-0 shadow-sm z-20">
-                <div className="flex justify-between items-end mb-4">
-                    <div>
-                        <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{moduleCode}</span>
-                        <h2 className="text-2xl font-bold text-slate-900">{moduleTitle}</h2>
-                    </div>
-                    <div className="bg-indigo-50 px-3 py-1 rounded text-indigo-700 text-xs font-bold flex items-center gap-1">
-                        <Trophy className="w-3 h-3" /> Score: <span>{score}</span>
-                    </div>
-                </div>
-                <div className="flex gap-6">
+        <section className="absolute inset-0 flex bg-slate-50">
+            {/* ── Sidebar ───────────────────────────────── */}
+            <aside className="module-sidebar flex flex-col">
+                {/* Back button */}
+                <div className="p-4 border-b border-slate-100">
                     <button
-                        onClick={() => setActiveTab('reading')}
-                        className={`pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'reading' ? 'tab-active' : 'tab-inactive'}`}
+                        onClick={() => navigate('onboarding')}
+                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition font-medium"
                     >
-                        <BookOpen className="w-4 h-4" /> Reading
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('quiz')}
-                        className={`pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'quiz' ? 'tab-active' : 'tab-inactive'}`}
-                    >
-                        <CheckSquare className="w-4 h-4" /> Knowledge Check
+                        <ArrowLeft className="w-4 h-4" /> All Subjects
                     </button>
                 </div>
-            </div>
 
-            {/* ── Scrollable Content ── */}
-            <div className="flex-1 overflow-y-auto relative p-6 md:p-8" id="module-scroll-container">
-                <div className="max-w-6xl mx-auto grid grid-cols-12 gap-8">
+                {/* Subject header */}
+                {subject && (
+                    <div className="p-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl">{subject.icon}</span>
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-sm">{subject.name}</h3>
+                                <p className="text-xs text-slate-400">{subject.lessons.length} lessons</p>
+                            </div>
+                        </div>
+                        {/* Progress */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-slate-500 font-medium">Progress</span>
+                                <span className="text-indigo-600 font-bold">{progress}%</span>
+                            </div>
+                            <div className="progress-track">
+                                <div className="progress-fill" style={{ width: `${progress}%` }} />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-                    {/* ── Reading Tab ── */}
-                    {activeTab === 'reading' && (
-                        <div className="col-span-12 lg:col-span-8 space-y-6 fade-enter">
-                            {/* Toolbar */}
-                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    {/* TTS — only shown in dyslexia mode */}
-                                    <div className={`tts-control items-center gap-2 ${isDyslexia ? 'flex' : 'hidden'}`}>
+                {/* Lesson list */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Lessons</p>
+                    {subject && subject.lessons.map((lesson, idx) => {
+                        const isActive = currentLesson?.id === lesson.id;
+                        const isDone = completedLessons.has(lesson.id);
+                        return (
+                            <button
+                                key={lesson.id}
+                                onClick={() => handleLessonClick(subject, lesson)}
+                                className={`w-full text-left p-3 rounded-xl transition-all border ${isActive
+                                    ? 'bg-indigo-50 border-indigo-200 shadow-sm'
+                                    : 'bg-white border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/50'
+                                    }`}
+                            >
+                                <div className="flex items-start gap-2.5">
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${isActive ? 'bg-indigo-600 text-white' : isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className={`text-xs font-semibold truncate ${isActive ? 'text-indigo-700' : 'text-slate-700'}`}>{lesson.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <Clock className="w-3 h-3 text-slate-300" />
+                                            <span className="text-[10px] text-slate-400">{lesson.duration}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Other subjects */}
+                <div className="p-3 border-t border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Other Subjects</p>
+                    <div className="space-y-1">
+                        {SUBJECTS.filter(s => s.id !== subject?.id).slice(0, 4).map(s => (
+                            <button
+                                key={s.id}
+                                onClick={() => handleLessonClick(s, s.lessons[0])}
+                                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition text-left"
+                            >
+                                <span className="text-base">{s.icon}</span>
+                                <span className="text-xs font-medium text-slate-600 truncate">{s.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </aside>
+
+            {/* ── Main Content ───────────────────────────── */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Module Header */}
+                <div className="bg-white border-b border-slate-200 px-8 pt-5 pb-0 shadow-sm z-20">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                            {subject && <span className="text-xl">{subject.icon}</span>}
+                            <div>
+                                <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{moduleCode}</span>
+                                <h2 className="text-xl font-bold text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{moduleTitle}</h2>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {/* Active mode badges */}
+                            {activeProfiles.size > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                    {[...activeProfiles].map(p => (
+                                        <span key={p} className={`adaptive-badge badge-${p}`}>
+                                            {p === 'dyslexia' ? '📖' : p === 'adhd' ? '⚡' : '🧩'} {p}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                onClick={markComplete}
+                                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition"
+                            >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Mark Complete
+                            </button>
+                            {/* Test button — remove after confirming ADHD mode works */}
+                            {!activeProfiles.has('adhd') && (
+                                <button
+                                    onClick={() => activateProfile?.('adhd')}
+                                    title="Test: force ADHD mode"
+                                    className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-100 transition"
+                                >
+                                    ⚡ Test ADHD
+                                </button>
+                            )}
+                            <div className="stat-pill">
+                                <Trophy className="w-3.5 h-3.5" /> {score} pts
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-6">
+                        <button
+                            onClick={() => setActiveTab('reading')}
+                            className={`pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'reading' ? 'tab-active' : 'tab-inactive'}`}
+                        >
+                            <BookOpen className="w-4 h-4" /> Reading
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('quiz')}
+                            className={`pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'quiz' ? 'tab-active' : 'tab-inactive'}`}
+                        >
+                            <CheckSquare className="w-4 h-4" /> Knowledge Check
+                        </button>
+                    </div>
+                </div>
+
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8" id="module-scroll-container">
+                    <div className="max-w-3xl mx-auto">
+                        {/* Reading Tab */}
+                        {activeTab === 'reading' && (
+                            <div className="space-y-5 fade-enter">
+                                {/* Toolbar */}
+                                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`tts-control items-center gap-2 ${isDyslexia ? 'flex' : 'hidden'}`}>
+                                            <button
+                                                onClick={toggleTTS}
+                                                className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1"
+                                            >
+                                                {speaking ? <StopCircle className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                                                {speaking ? 'Stop' : 'Listen'}
+                                            </button>
+                                        </div>
                                         <button
-                                            onClick={toggleTTS}
-                                            className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1"
+                                            onClick={simplifyText}
+                                            className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition flex items-center gap-1 btn-interactive"
                                         >
-                                            {speaking ? <StopCircle className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                                            {speaking ? 'Stop' : 'Listen'}
+                                            <Wand2 className="w-3 h-3" /> Simplify
                                         </button>
                                     </div>
-                                    <button
-                                        onClick={simplifyText}
-                                        className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition flex items-center gap-1 btn-interactive"
-                                    >
-                                        <Wand2 className="w-3 h-3" /> Simplify
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        className="hidden"
-                                        accept="image/*,application/pdf,.docx"
-                                        onChange={e => handleFile(e.target.files[0])}
-                                    />
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold hover:bg-slate-700 transition flex items-center gap-1 btn-interactive"
-                                    >
-                                        <Upload className="w-3 h-3" /> Upload File
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Article Area */}
-                            <div className="relative bg-white rounded-xl shadow-sm border border-slate-100 min-h-[400px]">
-                                {/* Loading Overlay */}
-                                {loading && (
-                                    <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center z-50 rounded-xl backdrop-blur-sm">
-                                        <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-2" />
-                                        <span className="text-sm font-bold text-slate-500">{loadingText}</span>
-                                        <button onClick={cancelLoad} className="mt-4 text-xs text-red-500 underline">Cancel</button>
+                                    <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,application/pdf,.docx"
+                                            onChange={e => handleFile(e.target.files[0])}
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold hover:bg-slate-700 transition flex items-center gap-1 btn-interactive"
+                                        >
+                                            <Upload className="w-3 h-3" /> Upload File
+                                        </button>
                                     </div>
-                                )}
-                                <article
-                                    id="article-text"
-                                    className="p-8 prose prose-slate max-w-none text-slate-600"
-                                    dangerouslySetInnerHTML={{ __html: articleHTML }}
-                                />
-                            </div>
-
-                            {/* End Session */}
-                            <div className="flex justify-end pt-4">
-                                <button
-                                    onClick={finishSession}
-                                    className="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
-                                >
-                                    End Session &amp; Save Data <Save className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── Quiz Tab ── */}
-                    {activeTab === 'quiz' && (
-                        <div className="col-span-12 lg:col-span-8 space-y-6">
-                            <QuizSection />
-                        </div>
-                    )}
-
-                    {/* ── Sidebar (distraction) ── */}
-                    <div className="col-span-12 lg:col-span-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200 distraction adaptive-content">
-                        <h3 className="font-bold text-slate-700 mb-3 text-sm uppercase tracking-wide">Switch Subject</h3>
-                        <div className="space-y-3">
-                            <button className="w-full flex items-center gap-3 p-3 hover:bg-indigo-50 rounded-lg border border-slate-100 transition">
-                                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded flex items-center justify-center shrink-0">
-                                    <Microscope className="w-4 h-4" />
                                 </div>
-                                <span className="text-sm font-medium">Biology</span>
-                            </button>
-                            <button className="w-full flex items-center gap-3 p-3 hover:bg-indigo-50 rounded-lg border border-slate-100 transition">
-                                <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded flex items-center justify-center shrink-0">
-                                    <Orbit className="w-4 h-4" />
+
+                                {/* Article Area */}
+                                <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 min-h-[400px]">
+                                    {loading && (
+                                        <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center z-50 rounded-2xl backdrop-blur-sm">
+                                            <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-2" />
+                                            <span className="text-sm font-bold text-slate-500">{loadingText}</span>
+                                            <button onClick={cancelLoad} className="mt-4 text-xs text-red-500 underline">Cancel</button>
+                                        </div>
+                                    )}
+                                    <article
+                                        id="article-text"
+                                        className="p-8 prose prose-slate max-w-none text-slate-600"
+                                        dangerouslySetInnerHTML={{ __html: articleHTML }}
+                                    />
                                 </div>
-                                <span className="text-sm font-medium">Physics</span>
-                            </button>
-                        </div>
+
+                                {/* End Session */}
+                                <div className="flex justify-between items-center pt-2">
+                                    <button
+                                        onClick={() => setActiveTab('quiz')}
+                                        className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                                    >
+                                        <CheckSquare className="w-4 h-4" /> Take Quiz
+                                    </button>
+                                    <button
+                                        onClick={finishSession}
+                                        className="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-xl hover:bg-indigo-700 transition flex items-center gap-2"
+                                    >
+                                        End Session <Save className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Quiz Tab */}
+                        {activeTab === 'quiz' && (
+                            <div className="space-y-5 fade-enter">
+                                <QuizSection />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
