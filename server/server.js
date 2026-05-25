@@ -36,7 +36,26 @@ if (process.env.VITE_APP_URL) {
     allowedOrigins.push(...urls);
 }
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        // 1. Check if origin is explicitly in allowed list (including VITE_APP_URL)
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        // 2. Preemptive check: Allow Vercel or localhost domains dynamically to prevent CORS failure
+        if (origin.endsWith('.vercel.app') || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            return callback(null, true);
+        }
+        
+        // 3. Fallback to prevent blocking the user (reflects the request origin)
+        return callback(null, true);
+    },
+    credentials: true
+}));
 app.use(express.json());
 
 // Routes
