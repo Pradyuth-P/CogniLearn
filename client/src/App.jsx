@@ -11,7 +11,7 @@ import ToastContainer from './components/ToastContainer.jsx';
 export const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
-export const API_BASE = import.meta.env.DEV ? '' : 'https://cognilearn-vshh.onrender.com';
+export const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /* ─── Subjects & Lessons Data ──────────────────── */
 export const SUBJECTS = [
