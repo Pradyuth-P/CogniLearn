@@ -359,6 +359,7 @@ export const DEFAULT_CONTENT = getBioContent('deep-sea');
 export default function App() {
     /* ── View Router ── */
     const [view, setView] = useState('onboarding');
+    const [isFacultyLoggedIn, setIsFacultyLoggedIn] = useState(false);
 
     /* ── Lesson/Subject ── */
     const [currentSubject, setCurrentSubject] = useState(SUBJECTS[0]);
@@ -460,9 +461,13 @@ export default function App() {
 
     /* ── Navigate ── */
     const navigate = useCallback((v) => {
+        if (v === 'dashboard' && !isFacultyLoggedIn) {
+            setView('login');
+            return;
+        }
         setView(v);
         if (v === 'onboarding') resetSession();
-    }, [resetSession]);
+    }, [resetSession, isFacultyLoggedIn]);
 
     /* ── Start session ── */
     const startSession = useCallback(() => {
@@ -601,6 +606,7 @@ export default function App() {
         showAiQuiz, setShowAiQuiz, startSession, finishSession, resetSession,
         currentSubject, currentLesson, selectLesson,
         activateProfile,  // exposed for manual test button in Module
+        isFacultyLoggedIn, setIsFacultyLoggedIn,
     };
 
     return (
@@ -611,7 +617,7 @@ export default function App() {
                     {view === 'onboarding' && <Onboarding />}
                     {view === 'module' && <Module />}
                     {view === 'login' && <Login />}
-                    {view === 'dashboard' && <Dashboard />}
+                    {view === 'dashboard' && isFacultyLoggedIn && <Dashboard />}
                     {isGameActive && <GameOverlay />}
                 </main>
                 <ToastContainer toasts={toasts} />

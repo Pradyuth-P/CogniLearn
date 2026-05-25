@@ -3,16 +3,20 @@ import { ShieldIcon } from 'lucide-react';
 import { useApp } from '../App.jsx';
 
 export default function Login() {
-    const { navigate } = useApp();
+    const { navigate, setIsFacultyLoggedIn } = useApp();
     const [user, setUser] = useState('');
     const [pass, setPass] = useState('');
 
     const handleLogin = (e) => {
         e.preventDefault();
-        if (user === 'abc' && pass === '123') {
+        const trimmedUser = user.trim().toLowerCase();
+        const trimmedPass = pass.trim();
+        console.log("Attempting login with:", { user: trimmedUser, pass: trimmedPass });
+        if (trimmedUser === 'abc' && trimmedPass === '123') {
+            setIsFacultyLoggedIn(true);
             navigate('dashboard');
         } else {
-            alert('Invalid Credentials');
+            alert(`Invalid Credentials\n\nReceived details:\nFaculty ID: "${trimmedUser}"\nPassword: "${trimmedPass}"`);
         }
     };
 

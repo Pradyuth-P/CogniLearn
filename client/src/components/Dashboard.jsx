@@ -3,7 +3,7 @@ import { LayoutDashboard } from 'lucide-react';
 import { useApp } from '../App.jsx';
 
 export default function Dashboard() {
-    const { navigate } = useApp();
+    const { navigate, setIsFacultyLoggedIn } = useApp();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -31,7 +31,10 @@ export default function Dashboard() {
                     <LayoutDashboard className="w-5 h-5" /> Student Monitoring Dashboard
                 </h2>
                 <button
-                    onClick={() => navigate('onboarding')}
+                    onClick={() => {
+                        setIsFacultyLoggedIn(false);
+                        navigate('onboarding');
+                    }}
                     className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition"
                 >
                     Logout

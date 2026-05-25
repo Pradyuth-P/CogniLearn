@@ -1,3 +1,16 @@
+const dns = require('dns');
+
+// On some systems (especially Windows), Node's internal DNS resolver gets configured with '127.0.0.1' (loopback)
+// which causes MongoDB's SRV query to fail with ECONNREFUSED. If so, fall back to public DNS resolvers.
+try {
+    const servers = dns.getServers();
+    if (!servers || servers.length === 0 || servers.includes('127.0.0.1') || servers.includes('::1')) {
+        dns.setServers(['8.8.8.8', '1.1.1.1']);
+    }
+} catch (err) {
+    console.warn('⚠️ DNS override failed:', err.message);
+}
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');

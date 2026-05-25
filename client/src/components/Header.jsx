@@ -2,7 +2,7 @@ import { BrainCircuit, ShieldCheck, Home, BookOpen, BarChart2, Bell } from 'luci
 import { useApp } from '../App.jsx';
 
 export default function Header() {
-    const { view, navigate, activeProfiles } = useApp();
+    const { view, navigate, activeProfiles, isFacultyLoggedIn } = useApp();
     const isMonitoring = view === 'module';
 
     return (
@@ -28,9 +28,11 @@ export default function Header() {
                 <button onClick={() => navigate('module')} className={`nav-link flex items-center gap-1.5 ${view === 'module' ? 'active' : ''}`}>
                     <BookOpen className="w-3.5 h-3.5" />Learn
                 </button>
-                <button onClick={() => navigate('dashboard')} className={`nav-link flex items-center gap-1.5 ${view === 'dashboard' ? 'active' : ''}`}>
-                    <BarChart2 className="w-3.5 h-3.5" />Dashboard
-                </button>
+                {isFacultyLoggedIn && (
+                    <button onClick={() => navigate('dashboard')} className={`nav-link flex items-center gap-1.5 ${view === 'dashboard' ? 'active' : ''}`}>
+                        <BarChart2 className="w-3.5 h-3.5" />Dashboard
+                    </button>
+                )}
             </nav>
 
             {/* Right side */}
@@ -56,7 +58,7 @@ export default function Header() {
                 )}
                 <div className="h-5 w-px bg-slate-200" />
                 <button
-                    onClick={() => navigate('login')}
+                    onClick={() => navigate(isFacultyLoggedIn ? 'dashboard' : 'login')}
                     className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition px-3 py-1.5 rounded-lg hover:bg-indigo-50"
                 >
                     <ShieldCheck className="w-4 h-4" /> Faculty
