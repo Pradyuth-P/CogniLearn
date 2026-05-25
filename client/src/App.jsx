@@ -11,6 +11,8 @@ import ToastContainer from './components/ToastContainer.jsx';
 export const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
+export const API_BASE = import.meta.env.DEV ? '' : 'https://cognilearn-vshh.onrender.com';
+
 /* ─── Subjects & Lessons Data ──────────────────── */
 export const SUBJECTS = [
     {
@@ -497,7 +499,7 @@ export default function App() {
         };
 
         try {
-            const res = await fetch('/api/sessions', {
+            const res = await fetch(`${API_BASE}/api/sessions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard } from 'lucide-react';
-import { useApp } from '../App.jsx';
+import { useApp, API_BASE } from '../App.jsx';
 
 export default function Dashboard() {
     const { navigate, setIsFacultyLoggedIn } = useApp();
@@ -11,7 +11,7 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchSessions = async () => {
             try {
-                const res = await fetch('/api/sessions');
+                const res = await fetch(`${API_BASE}/api/sessions`);
                 if (!res.ok) throw new Error('Bad response');
                 const data = await res.json();
                 setSessions(data);
